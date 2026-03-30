@@ -3,69 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Knowledge Collector v1.0</title>
+    <title>Knowledge Collector v2.0</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --primary: #2da44e; --accent: #0969da; }
-        body { background: #f6f8fa; color: #24292f; }
-        .card { background: white; border: 1px solid #d0d7de; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .log-box { background: #24292f; color: #adbac7; font-family: monospace; font-size: 0.75rem; height: 100px; overflow-y: auto; }
-        .badge-news { background: #ddf4ff; color: #0969da; }
-        .badge-guide { background: #dafbe1; color: #1a7f37; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        
+        /* タブの活性化スタイル */
+        .tab-active { 
+            color: #2563eb; 
+            border-bottom: 2px solid #2563eb; 
+            background-color: #eff6ff;
+        }
+        
+        .card-gradient {
+            background: linear-gradient(to bottom right, #ffffff, #f1f5f9);
+        }
+
+        /* アニメーション */
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="p-4">
-    <div class="max-w-xl mx-auto">
-        <header class="flex justify-between items-center mb-6">
-            <h1 class="text-xl font-bold">🌐 Knowledge Collector</h1>
-            <button onclick="toggleSettings()" class="text-gray-500 text-sm">⚙️ 設定</button>
-        </header>
+<body class="pb-10">
 
-        <div id="settings" class="hidden card p-4 mb-6">
-            <h2 class="font-bold mb-3">API 設定 (IndexedDB保存)</h2>
-            <input id="gh-token" type="password" placeholder="GitHub Token" class="w-full border p-2 rounded mb-2">
-            <input id="gemini-key" type="password" placeholder="Gemini API Key" class="w-full border p-2 rounded mb-2">
-            <input id="repo-path" type="text" placeholder="user/repo" class="w-full border p-2 rounded mb-2">
-            <button onclick="saveSettings()" class="w-full bg-blue-600 text-white p-2 rounded">設定を保存</button>
+    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3">
+        <div class="max-w-2xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                <i class="fa-solid fa-brain mr-2"></i>K-Collector
+            </h1>
+            <button onclick="toggleSettings()" class="w-10 h-10 rounded-full hover:bg-slate-100 transition-colors text-slate-500">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-2xl mx-auto p-4">
+        
+        <div id="settings" class="hidden mb-6 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm fade-in">
+            <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Settings</h2>
+            <div class="space-y-3">
+                <div class="relative">
+                    <i class="fa-brands fa-github absolute left-3 top-3 text-slate-400"></i>
+                    <input id="gh-token" type="password" placeholder="GitHub Token" class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="relative">
+                    <i class="fa-solid fa-key absolute left-3 top-3 text-slate-400"></i>
+                    <input id="gemini-key" type="password" placeholder="Gemini API Key" class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="relative">
+                    <i class="fa-solid fa-folder absolute left-3 top-3 text-slate-400"></i>
+                    <input id="repo-path" type="text" placeholder="username/repository" class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <button onclick="saveSettings()" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-all">Save Config</button>
+            </div>
         </div>
 
-        <div id="log" class="log-box p-3 rounded mb-6 hidden"></div>
+        <div id="edit-area" class="hidden mb-8 p-6 bg-blue-50 border-2 border-blue-200 rounded-2xl shadow-lg fade-in">
+            <div class="flex items-center mb-4 text-blue-600">
+                <i class="fa-solid fa-wand-magic-sparkles mr-2 animate-pulse"></i>
+                <h2 class="font-bold">AI Analysis Result</h2>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="text-[10px] font-black text-blue-400 uppercase">Category</label>
+                    <select id="edit-category" class="w-full mt-1 p-2 bg-white border border-blue-100 rounded-lg outline-none">
+                        <option value="News">News</option>
+                        <option value="Guideline">Guideline</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-blue-400 uppercase">Tags</label>
+                    <input id="edit-tags" type="text" class="w-full mt-1 p-2 bg-white border border-blue-100 rounded-lg outline-none">
+                </div>
+            </div>
 
-        <div id="edit-area" class="hidden card p-5 mb-6 border-2 border-blue-400">
-            <h2 class="font-bold text-blue-700 mb-4">✨ AI 解析結果の確認</h2>
-            <div class="mb-4">
-                <label class="text-xs font-bold text-gray-500 uppercase">カテゴリ</label>
-                <select id="edit-category" class="w-full border p-2 rounded">
-                    <option value="News">News (ニュース/トレンド)</option>
-                    <option value="Guideline">Guideline (ガイドライン/知識)</option>
-                </select>
+            <label class="text-[10px] font-black text-blue-400 uppercase">3-Line Summary</label>
+            <textarea id="edit-summary" class="w-full mt-1 p-3 bg-white border border-blue-100 rounded-lg h-28 outline-none leading-relaxed text-sm"></textarea>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="commitToGitHub()" id="save-btn" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-blue-700 transition-all">Confirm & Save</button>
+                <button onclick="document.getElementById('edit-area').classList.add('hidden')" class="px-6 py-3 bg-white text-slate-400 font-bold rounded-xl border border-slate-200">Cancel</button>
             </div>
-            <div class="mb-4">
-                <label class="text-xs font-bold text-gray-500 uppercase">タグ (カンマ区切り)</label>
-                <input id="edit-tags" type="text" class="w-full border p-2 rounded">
-            </div>
-            <div class="mb-4">
-                <label class="text-xs font-bold text-gray-500 uppercase">3行要約</label>
-                <textarea id="edit-summary" class="w-full border p-2 rounded h-24"></textarea>
-            </div>
-            <button onclick="commitToGitHub()" id="save-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded shadow-lg">GitHubへ保存</button>
         </div>
 
-        <div class="flex gap-4 mb-4 border-b border-gray-200">
-            <button onclick="renderList('all')" class="pb-2 px-2 font-bold border-b-2 border-green-600">すべて</button>
-            <button onclick="renderList('News')" class="pb-2 px-2 text-gray-500">News</button>
-            <button onclick="renderList('Guideline')" class="pb-2 px-2 text-gray-500">Guideline</button>
-        </div>
+        <div id="log" class="hidden mb-6 p-3 bg-slate-900 text-slate-300 text-[10px] font-mono rounded-lg overflow-x-auto"></div>
+
+        <nav class="flex mb-6 bg-slate-100 p-1 rounded-xl">
+            <button onclick="switchTab('all')" id="tab-all" class="flex-1 py-2 text-sm font-bold rounded-lg transition-all tab-active">All</button>
+            <button onclick="switchTab('News')" id="tab-News" class="flex-1 py-2 text-sm font-bold rounded-lg transition-all text-slate-500">News</button>
+            <button onclick="switchTab('Guideline')" id="tab-Guideline" class="flex-1 py-2 text-sm font-bold rounded-lg transition-all text-slate-500">Guideline</button>
+        </nav>
+
         <div id="list" class="space-y-4">
+            <div class="text-center py-20 text-slate-400">
+                <i class="fa-solid fa-cloud-download animate-bounce mb-4 text-3xl block"></i>
+                Loading your knowledge base...
             </div>
-    </div>
+        </div>
+    </main>
 
     <script>
         const DB_NAME = 'KnowledgeCollectorDB';
         let currentEntry = null;
+        let activeFilter = 'all';
 
-        // --- 1. IndexedDB 処理 ---
+        // --- Tab Logic ---
+        function switchTab(category) {
+            activeFilter = category;
+            // UI Update
+            ['all', 'News', 'Guideline'].forEach(c => {
+                const btn = document.getElementById(`tab-${c}`);
+                if (c === category) {
+                    btn.classList.add('tab-active', 'bg-white', 'shadow-sm');
+                    btn.classList.remove('text-slate-500');
+                } else {
+                    btn.classList.remove('tab-active', 'bg-white', 'shadow-sm');
+                    btn.classList.add('text-slate-500');
+                }
+            });
+            renderList(category);
+        }
+
+        // --- Core Logic (Previously refined, now with better UI injection) ---
         async function openDB() {
             return new Promise(resolve => {
                 const req = indexedDB.open(DB_NAME, 1);
@@ -73,14 +136,17 @@
                 req.onsuccess = e => resolve(e.target.result);
             });
         }
+
         async function saveSettings() {
             const db = await openDB();
             const tx = db.transaction('settings', 'readwrite');
             tx.objectStore('settings').put(document.getElementById('gh-token').value, 'ghToken');
             tx.objectStore('settings').put(document.getElementById('gemini-key').value, 'geminiKey');
             tx.objectStore('settings').put(document.getElementById('repo-path').value, 'repoPath');
+            alert("Settings saved!");
             location.reload();
         }
+
         async function getSet(key) {
             const db = await openDB();
             return new Promise(r => {
@@ -97,12 +163,9 @@
             log.scrollTop = log.scrollHeight;
         }
 
-        // --- 2. メインロジック ---
         window.onload = async () => {
-            // Android共有の受け取り
             const params = new URLSearchParams(window.location.search);
             const sharedUrl = params.get('url') || params.get('text');
-
             if (sharedUrl) {
                 const urlMatch = sharedUrl.match(/https?:\/\/[^\s]+/);
                 if (urlMatch) analyzeUrl(urlMatch[0]);
@@ -111,124 +174,112 @@
         };
 
         async function analyzeUrl(url) {
-            addLog("記事の内容を抽出中...");
+            addLog("Extracting content...");
             const geminiKey = await getSet('geminiKey');
-            if (!geminiKey) return alert("Gemini API Keyを設定してください");
+            if (!geminiKey) { toggleSettings(); return; }
 
             try {
-                // Jina Readerで本文抽出
                 const readerRes = await fetch(`https://r.jina.ai/${url}`);
                 const content = await readerRes.text();
 
-                addLog("AI解析を開始 (Gemini 1.5 Flash)...");
-                const prompt = `
-                以下の記事を解析し、JSON形式で回答して。
-                JSONプロパティ: "summary"(3行要約), "category"("News"か"Guideline"), "tags"(3つのタグ配列)
-                記事内容: ${content.substring(0, 6000)}`;
+                addLog("AI Analyzing...");
+                const prompt = `Return ONLY JSON. summary(3 lines), category("News" or "Guideline"), tags(array of 3 strings). Content: ${content.substring(0, 6000)}`;
 
                 const aiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
                     method: 'POST',
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
                 const aiData = await aiRes.json();
-                let result = aiData.candidates[0].content.parts[0].text;
-                // Markdownのコードブロックをクリーンアップ
-                result = result.replace(/```json|```/g, '');
+                let result = aiData.candidates[0].content.parts[0].text.replace(/```json|```/g, '');
                 const parsed = JSON.parse(result);
 
-                // UIに反映
                 currentEntry = { url, ...parsed, date: new Date().toISOString() };
                 document.getElementById('edit-summary').value = parsed.summary;
                 document.getElementById('edit-category').value = parsed.category;
                 document.getElementById('edit-tags').value = parsed.tags.join(', ');
                 document.getElementById('edit-area').classList.remove('hidden');
-                addLog("AI解析完了。内容を確認してください。");
-            } catch (err) {
-                addLog(`エラー: ${err.message}`);
-            }
+                addLog("Analysis ready.");
+            } catch (err) { addLog("Error: " + err.message); }
         }
 
         async function commitToGitHub() {
             const btn = document.getElementById('save-btn');
-            btn.disabled = true;
-            btn.innerText = "保存中...";
+            btn.disabled = true; btn.innerText = "Saving...";
             
             const token = await getSet('ghToken');
             const repo = await getSet('repoPath');
-            const path = 'data.json';
-
+            
             try {
-                addLog("GitHubリポジトリを更新中...");
-                // 編集後の値を取得
                 currentEntry.summary = document.getElementById('edit-summary').value;
                 currentEntry.category = document.getElementById('edit-category').value;
                 currentEntry.tags = document.getElementById('edit-tags').value.split(',').map(t => t.trim());
 
-                // 既存データ取得
                 const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' };
-                const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, { headers });
+                const res = await fetch(`https://api.github.com/repos/${repo}/contents/data.json`, { headers });
                 
-                let sha = null;
-                let data = [];
+                let sha = null, data = [];
                 if (res.ok) {
                     const json = await res.json();
                     sha = json.sha;
                     data = JSON.parse(decodeURIComponent(escape(atob(json.content))));
                 }
-
                 data.unshift(currentEntry);
 
-                // Push
-                const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                await fetch(`https://api.github.com/repos/${repo}/contents/data.json`, {
                     method: 'PUT',
                     headers,
                     body: JSON.stringify({
-                        message: `Add ${currentEntry.category}: ${currentEntry.url}`,
+                        message: `Save: ${currentEntry.url}`,
                         content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))),
                         sha: sha
                     })
                 });
 
-                if (putRes.ok) {
-                    addLog("✅ GitHubへの保存に成功しました！");
-                    document.getElementById('edit-area').classList.add('hidden');
-                    renderList();
-                }
-            } catch (err) {
-                addLog(`エラー: ${err.message}`);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "GitHubへ保存";
-            }
+                document.getElementById('edit-area').classList.add('hidden');
+                renderList(activeFilter);
+                addLog("Saved to GitHub!");
+            } catch (err) { addLog("Error: " + err.message); }
+            finally { btn.disabled = false; btn.innerText = "Confirm & Save"; }
         }
 
         async function renderList(filter = 'all') {
             const repo = await getSet('repoPath');
-            if (!repo) return;
+            if (!repo) {
+                document.getElementById('list').innerHTML = `<div class="text-center p-10 text-slate-400">Please set up your GitHub repository in settings.</div>`;
+                return;
+            }
             
-            // GitHubから最新データを直接取得（キャッシュ回避のためクエリ追加）
             const res = await fetch(`https://raw.githubusercontent.com/${repo}/main/data.json?t=${Date.now()}`);
-            if (!res.ok) return;
+            if (!res.ok) {
+                document.getElementById('list').innerHTML = `<div class="text-center p-10 text-slate-400">No data found. Start by sharing a link!</div>`;
+                return;
+            }
             const data = await res.json();
 
             const listEl = document.getElementById('list');
-            listEl.innerHTML = data
-                .filter(item => filter === 'all' || item.category === filter)
-                .map(item => `
-                    <div class="card p-4">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-xs px-2 py-1 rounded font-bold ${item.category === 'News' ? 'badge-news' : 'badge-guide'}">
-                                ${item.category}
-                            </span>
-                            <span class="text-xs text-gray-400">${new Date(item.date).toLocaleDateString()}</span>
-                        </div>
-                        <a href="${item.url}" target="_blank" class="font-bold text-accent hover:underline block mb-2">${item.url}</a>
-                        <p class="text-sm text-gray-600 mb-3 whitespace-pre-wrap">${item.summary}</p>
-                        <div class="flex flex-wrap gap-1">
-                            ${item.tags.map(tag => `<span class="text-[10px] bg-gray-100 px-2 py-0.5 rounded border border-gray-200 text-gray-500">#${tag}</span>`).join('')}
-                        </div>
+            const filteredData = data.filter(item => filter === 'all' || item.category === filter);
+            
+            listEl.innerHTML = filteredData.map(item => `
+                <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow fade-in">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider ${item.category === 'News' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}">
+                            ${item.category}
+                        </span>
+                        <span class="text-[10px] font-medium text-slate-400 italic">${new Date(item.date).toLocaleDateString()}</span>
                     </div>
-                `).join('');
+                    <p class="text-slate-700 text-sm leading-relaxed mb-4 font-medium">${item.summary}</p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        ${item.tags.map(tag => `<span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold">#${tag}</span>`).join('')}
+                    </div>
+                    <a href="${item.url}" target="_blank" class="text-[10px] text-blue-500 hover:underline flex items-center gap-1 truncate opacity-60 hover:opacity-100">
+                        <i class="fa-solid fa-link"></i> ${item.url}
+                    </a>
+                </div>
+            `).join('');
+            
+            if(filteredData.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-20 text-slate-300 italic">No entries in this category.</div>`;
+            }
         }
     </script>
 </body>
